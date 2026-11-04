@@ -1,0 +1,816 @@
+<title>Harbor Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #12202b;
+  --ink-soft: #4a5b68;
+  --paper: #ffffff;
+  --mist: #edf1f3;
+  --line: #d5dde2;
+  --harbor: #1f4e79;
+  --harbor-dark: #163a5b;
+  --credit: #0b6e55;
+  --debit: #a8321f;
+  --brass: #9a6f1c;
+  --radius: 6px;
+  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--mist);
+  line-height: 1.5;
+  font-size: 16px;
+}
+
+h1, h2, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+
+:focus-visible { outline: 3px solid #5aa0e0; outline-offset: 2px; }
+
+.num, .balance strong, .total strong, td.amt, .acct-balance {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius);
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--harbor); }
+.btn.primary { background: var(--harbor); border-color: var(--harbor); color: #fff; }
+.btn.primary:hover { background: var(--harbor-dark); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-soft); }
+.btn.quiet:hover { color: var(--ink); text-decoration: underline; }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+
+/* ---------- forms ---------- */
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+label { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 700; font-size: 0.9rem; }
+input, select {
+  border: 1px solid #aebac3;
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  font-weight: 500;
+}
+input:focus, select:focus { border-color: var(--harbor); }
+.optional, .hint { font-weight: 400; color: var(--ink-soft); font-size: 0.85rem; }
+.form-error { color: var(--debit); font-weight: 700; font-size: 0.9rem; }
+
+/* ---------- logged-out ---------- */
+.auth { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+.auth-intro {
+  background: var(--ink);
+  color: #fff;
+  padding: clamp(2rem, 7vw, 6rem);
+  display: flex; flex-direction: column; justify-content: center; gap: 1.25rem;
+}
+.auth-intro h1 { font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+.lede { font-size: 1.2rem; max-width: 30ch; color: #d6e0e7; }
+.fine { color: #93a6b4; font-size: 0.9rem; }
+
+.auth-panel {
+  background: var(--paper);
+  padding: clamp(2rem, 6vw, 5rem);
+  display: flex; flex-direction: column; justify-content: center; gap: 1.5rem;
+  max-width: 34rem; width: 100%; margin: 0 auto;
+}
+.tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--line); }
+.tabs button {
+  background: none; border: 0; padding: 0.5rem 0; cursor: pointer;
+  font-weight: 700; color: var(--ink-soft);
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--harbor); }
+
+/* ---------- app shell ---------- */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--ink); color: #fff; padding: 0.75rem clamp(1rem, 3vw, 2rem);
+}
+.brand { font-weight: 800; letter-spacing: -0.01em; font-size: 1.15rem; }
+.who { display: flex; align-items: center; gap: 0.75rem; }
+.who .btn.quiet { color: #c5d3dd; }
+.who .btn.quiet:hover { color: #fff; }
+
+.layout {
+  display: grid; grid-template-columns: 20rem 1fr; gap: 1.5rem;
+  max-width: 1200px; margin: 0 auto; padding: 1.5rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.label { display: block; font-size: 0.85rem; color: var(--ink-soft); font-weight: 500; }
+
+/* ---------- side ---------- */
+.side { display: flex; flex-direction: column; gap: 1rem; align-self: start; }
+.total { padding: 0.25rem 0.25rem 0.75rem; }
+.total strong { font-size: 1.75rem; font-weight: 800; }
+
+.account-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.account-btn {
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--paper); border: 1px solid var(--line); border-left: 6px solid var(--line);
+  border-radius: var(--radius); padding: 0.75rem 1rem;
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.account-btn:hover { border-color: var(--harbor); border-left-color: var(--harbor); }
+.account-btn[aria-current="true"] { border-color: var(--harbor); border-left-color: var(--harbor); box-shadow: inset 0 0 0 1px var(--harbor); }
+.account-btn .kind { font-weight: 700; }
+.account-btn .no { color: var(--ink-soft); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.account-btn .acct-balance { font-weight: 700; }
+
+/* ---------- main ---------- */
+.main { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.account-head {
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.5rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+}
+.acct-type { font-size: 1.1rem; font-weight: 800; }
+.acct-no { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.balance { text-align: right; }
+.balance strong { display: block; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.02em; color: var(--brass); line-height: 1.1; }
+
+.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.statement { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.statement h2 { font-size: 1.1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+th, td { padding: 0.7rem 1.25rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.85rem; color: var(--ink-soft); font-weight: 700; background: #f7f9fa; }
+th.num, td.num { text-align: right; }
+tbody tr:last-child td { border-bottom: 0; }
+td.date { white-space: nowrap; color: var(--ink-soft); font-size: 0.9rem; }
+td .sub { display: block; color: var(--ink-soft); font-size: 0.85rem; }
+td.in { color: var(--credit); font-weight: 700; }
+td.out { color: var(--debit); font-weight: 700; }
+td.bal { font-weight: 700; }
+.empty { padding: 1.5rem 1.25rem; color: var(--ink-soft); }
+
+/* ---------- dialogs ---------- */
+dialog {
+  border: 0; border-radius: 10px; padding: 1.75rem; width: min(26rem, calc(100vw - 2rem));
+  box-shadow: 0 20px 60px rgba(18, 32, 43, 0.35);
+}
+dialog::backdrop { background: rgba(18, 32, 43, 0.55); }
+dialog h2 { font-size: 1.3rem; }
+.dialog-sub { color: var(--ink-soft); margin-top: -0.5rem; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 0.75rem 1.25rem; border-radius: var(--radius);
+  font-weight: 700; max-width: calc(100vw - 2rem); z-index: 50;
+}
+
+/* ---------- small screens ---------- */
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-intro { padding: 2rem 1.5rem; }
+  .lede { font-size: 1.05rem; }
+  .auth-panel { padding: 2rem 1.5rem; }
+  .layout { grid-template-columns: 1fr; }
+  .balance { text-align: left; }
+}
+
+
+.demo-bar{background:#fff4d6;color:#4a3a0a;padding:.5rem clamp(1rem,3vw,2rem);font-size:.85rem;border-bottom:1px solid #e6d29a}
+.demo-bar b{font-weight:800}
+body{background:var(--mist);color:var(--ink)}
+
+</style>
+<div class="demo-bar">Preview mode. This runs in your browser with sample data and is not saved. Log in again with <b>demo@harbor.bank</b> and password <b>demo12345</b>, or create a new account.</div>
+<!-- ===== Logged-out view ===== -->
+  <main id="auth-view" class="auth" hidden>
+    <section class="auth-intro">
+      <h1>Harbor Bank</h1>
+      <p class="lede">A practice bank. Open accounts, move money between them, and read every rupee back in your statement.</p>
+      <p class="fine">This is a simulator. No real money is involved.</p>
+    </section>
+
+    <section class="auth-panel" aria-label="Log in or create an account">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-login" aria-selected="true" aria-controls="login-form">Log in</button>
+        <button role="tab" id="tab-register" aria-selected="false" aria-controls="register-form">Create account</button>
+      </div>
+
+      <form id="login-form" class="stack" novalidate>
+        <label>Email
+          <input name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>Password
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="form-error" role="alert" hidden></p>
+        <button class="btn primary" type="submit">Log in</button>
+      </form>
+
+      <form id="register-form" class="stack" novalidate hidden>
+        <label>Full name
+          <input name="name" type="text" autocomplete="name" required>
+        </label>
+        <label>Email
+          <input name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>Phone <span class="optional">optional</span>
+          <input name="phone" type="tel" autocomplete="tel">
+        </label>
+        <label>Password
+          <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+          <span class="hint">At least 8 characters</span>
+        </label>
+        <p class="form-error" role="alert" hidden></p>
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- ===== Logged-in view ===== -->
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <span class="brand">Harbor Bank</span>
+      <div class="who">
+        <span id="user-name"></span>
+        <button class="btn quiet" id="logout-btn" type="button">Log out</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="side" aria-label="Your accounts">
+        <div class="total">
+          <span class="label">Total across accounts</span>
+          <strong id="total-balance">₹0.00</strong>
+        </div>
+        <ul id="account-list" class="account-list"></ul>
+        <button class="btn" id="open-account-btn" type="button">Open new account</button>
+      </aside>
+
+      <main class="main" id="main-panel">
+        <section class="account-head">
+          <div>
+            <p class="acct-type" id="acct-type"></p>
+            <p class="acct-no" id="acct-no"></p>
+          </div>
+          <div class="balance">
+            <span class="label">Available balance</span>
+            <strong id="acct-balance">₹0.00</strong>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button class="btn primary" data-action="deposit" type="button">Deposit</button>
+          <button class="btn" data-action="withdraw" type="button">Withdraw</button>
+          <button class="btn" data-action="transfer" type="button">Send money</button>
+        </div>
+
+        <section class="statement" aria-labelledby="statement-title">
+          <h2 id="statement-title">Statement</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Details</th>
+                  <th scope="col" class="num">Money in</th>
+                  <th scope="col" class="num">Money out</th>
+                  <th scope="col" class="num">Balance</th>
+                </tr>
+              </thead>
+              <tbody id="statement-body"></tbody>
+            </table>
+          </div>
+          <p id="statement-empty" class="empty" hidden>No transactions yet. Make a deposit to see it here.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== Money dialog (deposit / withdraw / send) ===== -->
+  <dialog id="action-dialog">
+    <form id="action-form" class="stack" novalidate>
+      <h2 id="action-title"></h2>
+      <p class="dialog-sub" id="action-sub"></p>
+
+      <label id="to-field" hidden>Send to account number
+        <input name="toAccount" inputmode="numeric" autocomplete="off">
+        <span class="hint" id="to-hint"></span>
+      </label>
+      <label>Amount (₹)
+        <input name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+      </label>
+      <label>Note <span class="optional">optional</span>
+        <input name="remarks" type="text" maxlength="200" autocomplete="off">
+      </label>
+
+      <p class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn quiet" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit" id="action-submit"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== Open account dialog ===== -->
+  <dialog id="open-dialog">
+    <form id="open-form" class="stack" novalidate>
+      <h2>Open new account</h2>
+      <label>Account type
+        <select name="type">
+          <option value="SAVINGS">Savings</option>
+          <option value="CURRENT">Current</option>
+        </select>
+      </label>
+      <label>Opening deposit (₹) <span class="optional">optional</span>
+        <input name="initialDeposit" inputmode="decimal" autocomplete="off" placeholder="0.00">
+      </label>
+      <p class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn quiet" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Open account</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script>
+/* In-browser stand-in for the Spring Boot API, so this preview needs no server or database. */
+(() => {
+  const db = { users: [], accounts: [], txs: [], nextUser: 1, nextTx: 1 };
+  let session = null;
+
+  const round = (n) => Math.round(n * 100) / 100;
+  const addUser = (name, email, password, phone) => {
+    const u = { id: db.nextUser++, name, email, password, phone: phone || null };
+    db.users.push(u);
+    return u;
+  };
+  const addAccount = (userId, type) => {
+    const no = 1000000001 + db.accounts.length;
+    const a = { accountNo: no, userId, balance: 0, type };
+    db.accounts.push(a);
+    return a;
+  };
+  const addTx = (acc, type, direction, amount, related, remarks, date) => {
+    acc.balance = round(acc.balance + (direction === 'CREDIT' ? amount : -amount));
+    db.txs.push({
+      id: db.nextTx++, accountNo: acc.accountNo, type, direction, amount, balanceAfter: acc.balance,
+      relatedAccountNo: related || undefined, date: (date || new Date()).toISOString(), remarks,
+    });
+  };
+  const daysAgo = (d, h = 11) => { const x = new Date(); x.setDate(x.getDate() - d); x.setHours(h, 24, 0, 0); return x; };
+
+  // ----- sample data -----
+  const me = addUser('Harsh Kanojiya', 'demo@harbor.bank', 'demo12345', '98200 00000');
+  const asha = addUser('Asha Mehta', 'asha@harbor.bank', 'demo12345');
+  const sav = addAccount(me.id, 'SAVINGS');
+  const cur = addAccount(me.id, 'CURRENT');
+  const ashaAcc = addAccount(asha.id, 'SAVINGS');
+  addTx(sav, 'DEPOSIT', 'CREDIT', 62000, null, 'Salary for September', daysAgo(19));
+  addTx(sav, 'WITHDRAWAL', 'DEBIT', 4000, null, 'ATM cash', daysAgo(16, 18));
+  addTx(sav, 'TRANSFER', 'DEBIT', 15000, cur.accountNo, 'Move to current for rent', daysAgo(12, 9));
+  addTx(cur, 'TRANSFER', 'CREDIT', 15000, sav.accountNo, 'Move to current for rent', daysAgo(12, 9));
+  addTx(cur, 'WITHDRAWAL', 'DEBIT', 12500, null, 'Rent', daysAgo(11, 10));
+  addTx(sav, 'DEPOSIT', 'CREDIT', 1850.5, null, 'Cheque deposit', daysAgo(6, 15));
+  addTx(sav, 'TRANSFER', 'DEBIT', 2000, ashaAcc.accountNo, 'Dinner share', daysAgo(3, 20));
+  addTx(ashaAcc, 'TRANSFER', 'CREDIT', 2000, sav.accountNo, 'Dinner share', daysAgo(3, 20));
+  session = me.id;
+
+  // ----- tiny router -----
+  const reply = (status, data) => ({ ok: status < 400, status, json: async () => data });
+  const err = (status, message) => reply(status, { error: message });
+  const own = (no) => db.accounts.find((a) => a.accountNo === no && a.userId === session);
+  const amountOf = (v) => {
+    if (typeof v !== 'number' || !isFinite(v)) return { e: 'Enter an amount' };
+    if (Math.abs(v * 100 - Math.round(v * 100)) > 1e-6) return { e: 'Amounts can have at most 2 decimal places' };
+    if (v <= 0) return { e: 'Amount must be greater than zero' };
+    if (v > 10000000) return { e: 'A single amount can be at most 1,00,00,000.00' };
+    return { v: round(v) };
+  };
+  const mask = (name) => { const p = name.split(/\s+/); return p.length === 1 ? p[0] : p[0] + ' ' + p[p.length - 1][0] + '.'; };
+  const view = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone || undefined });
+
+  window.fetch = async (path, opts = {}) => {
+    await new Promise((r) => setTimeout(r, 120));
+    const method = opts.method || 'GET';
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    const url = new URL(path, location.href);
+    const p = url.pathname.startsWith('/') ? url.pathname : '/' + url.pathname;
+    let m;
+
+    if (p === '/api/auth/login' && method === 'POST') {
+      const u = db.users.find((x) => x.email === String(body.email).trim().toLowerCase() && x.password === body.password);
+      if (!u) return err(401, 'Email or password is incorrect');
+      session = u.id;
+      return reply(200, view(u));
+    }
+    if (p === '/api/auth/register' && method === 'POST') {
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return err(400, 'Enter a valid email address');
+      if (!body.name) return err(400, 'Name is required');
+      if (!body.password || body.password.length < 8) return err(400, 'Password must be 8 to 72 characters');
+      if (db.users.some((x) => x.email === email)) return err(409, 'An account with this email already exists');
+      const u = addUser(body.name.trim(), email, body.password, body.phone);
+      addAccount(u.id, 'SAVINGS');
+      session = u.id;
+      return reply(201, view(u));
+    }
+    if (p === '/api/auth/logout') { session = null; return reply(200, { message: 'Logged out' }); }
+    if (session === null) return err(401, 'Log in to continue');
+    if (p === '/api/auth/me') return reply(200, view(db.users.find((x) => x.id === session)));
+
+    if (p === '/api/accounts' && method === 'GET') return reply(200, db.accounts.filter((a) => a.userId === session));
+    if (p === '/api/accounts' && method === 'POST') {
+      if (body.type !== 'SAVINGS' && body.type !== 'CURRENT') return err(400, 'Account type must be Savings or Current');
+      let opening = 0;
+      if (body.initialDeposit) { const a = amountOf(body.initialDeposit); if (a.e) return err(400, a.e); opening = a.v; }
+      const acc = addAccount(session, body.type);
+      if (opening > 0) addTx(acc, 'DEPOSIT', 'CREDIT', opening, null, 'Opening deposit');
+      return reply(201, acc);
+    }
+    if ((m = p.match(/^\/api\/accounts\/(\d+)\/(deposit|withdraw)$/)) && method === 'POST') {
+      const acc = own(Number(m[1]));
+      if (!acc) return err(404, 'Account not found');
+      const a = amountOf(body.amount);
+      if (a.e) return err(400, a.e);
+      if (m[2] === 'deposit') addTx(acc, 'DEPOSIT', 'CREDIT', a.v, null, body.remarks || 'Cash deposit');
+      else {
+        if (acc.balance < a.v) return err(400, 'Not enough balance. Available: ' + acc.balance.toFixed(2));
+        addTx(acc, 'WITHDRAWAL', 'DEBIT', a.v, null, body.remarks || 'Cash withdrawal');
+      }
+      return reply(200, acc);
+    }
+    if ((m = p.match(/^\/api\/accounts\/(\d+)\/transactions$/))) {
+      const acc = own(Number(m[1]));
+      if (!acc) return err(404, 'Account not found');
+      const limit = Number(url.searchParams.get('limit')) || 100;
+      return reply(200, db.txs.filter((t) => t.accountNo === acc.accountNo).sort((x, y) => y.id - x.id).slice(0, limit));
+    }
+    if (p === '/api/transfers' && method === 'POST') {
+      const from = own(body.fromAccount);
+      const to = db.accounts.find((a) => a.accountNo === body.toAccount);
+      const a = amountOf(body.amount);
+      if (a.e) return err(400, a.e);
+      if (body.fromAccount === body.toAccount) return err(400, 'Choose a different account to send to');
+      if (!from) return err(404, 'Account not found');
+      if (!to) return err(404, 'The account you are sending to does not exist');
+      if (from.balance < a.v) return err(400, 'Not enough balance. Available: ' + from.balance.toFixed(2));
+      addTx(from, 'TRANSFER', 'DEBIT', a.v, to.accountNo, body.remarks || 'Transfer to ' + to.accountNo);
+      addTx(to, 'TRANSFER', 'CREDIT', a.v, from.accountNo, body.remarks || 'Transfer from ' + from.accountNo);
+      return reply(200, { fromAccount: from, toAccountNo: to.accountNo });
+    }
+    if ((m = p.match(/^\/api\/lookup\/(\d+)$/))) {
+      const acc = db.accounts.find((a) => a.accountNo === Number(m[1]));
+      if (!acc) return err(404, 'No account with this number');
+      return reply(200, { accountNo: acc.accountNo, holder: mask(db.users.find((u) => u.id === acc.userId).name) });
+    }
+    return err(404, 'Not found');
+  };
+})();
+
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+  const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+  const fmt = (n) => money.format(Number(n));
+  const dateFmt = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeFmt = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const state = { user: null, accounts: [], selected: null, mode: null };
+
+  // ---------- API ----------
+  async function api(path, options = {}) {
+    const res = await fetch(path, {
+      method: options.method || 'GET',
+      headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      credentials: 'same-origin',
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* empty body */ }
+    if (!res.ok) {
+      if (res.status === 401 && state.user) {
+        state.user = null;
+        showAuth();
+      }
+      throw new Error((data && data.error) || 'Request failed. Try again.');
+    }
+    return data;
+  }
+
+  // ---------- helpers ----------
+  function showError(form, message) {
+    const el = $('.form-error', form);
+    el.textContent = message || '';
+    el.hidden = !message;
+  }
+
+  let toastTimer;
+  function toast(message) {
+    const el = $('#toast');
+    el.textContent = message;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+  }
+
+  async function withBusy(form, fn) {
+    const buttons = $$('button[type="submit"]', form);
+    buttons.forEach((b) => (b.disabled = true));
+    try { await fn(); } finally { buttons.forEach((b) => (b.disabled = false)); }
+  }
+
+  function el(tag, props = {}, ...children) {
+    const node = document.createElement(tag);
+    Object.entries(props).forEach(([k, v]) => {
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else node.setAttribute(k, v);
+    });
+    children.forEach((c) => c && node.append(c));
+    return node;
+  }
+
+  const kindLabel = (t) => (t === 'SAVINGS' ? 'Savings account' : 'Current account');
+
+  // ---------- views ----------
+  function showAuth() {
+    $('#app-view').hidden = true;
+    $('#auth-view').hidden = false;
+  }
+
+  function showApp() {
+    $('#auth-view').hidden = true;
+    $('#app-view').hidden = false;
+    $('#user-name').textContent = state.user.name;
+  }
+
+  // ---------- auth ----------
+  function selectTab(which) {
+    const login = which === 'login';
+    $('#tab-login').setAttribute('aria-selected', String(login));
+    $('#tab-register').setAttribute('aria-selected', String(!login));
+    $('#login-form').hidden = !login;
+    $('#register-form').hidden = login;
+  }
+  $('#tab-login').addEventListener('click', () => selectTab('login'));
+  $('#tab-register').addEventListener('click', () => selectTab('register'));
+
+  async function submitAuth(form, path, body) {
+    showError(form, '');
+    await withBusy(form, async () => {
+      try {
+        state.user = await api(path, { method: 'POST', body });
+        form.reset();
+        await loadApp();
+      } catch (err) {
+        showError(form, err.message);
+      }
+    });
+  }
+
+  $('#login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (!f.email.value.trim() || !f.password.value) {
+      return showError(f, 'Enter your email and password');
+    }
+    submitAuth(f, '/api/auth/login', { email: f.email.value.trim(), password: f.password.value });
+  });
+
+  $('#register-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (!f.name.value.trim()) return showError(f, 'Enter your full name');
+    if (!f.email.value.trim()) return showError(f, 'Enter your email');
+    if (f.password.value.length < 8) return showError(f, 'Password must be at least 8 characters');
+    submitAuth(f, '/api/auth/register', {
+      name: f.name.value.trim(),
+      email: f.email.value.trim(),
+      phone: f.phone.value.trim(),
+      password: f.password.value,
+    });
+  });
+
+  $('#logout-btn').addEventListener('click', async () => {
+    try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) { /* ignore */ }
+    state.user = null;
+    state.accounts = [];
+    state.selected = null;
+    showAuth();
+    selectTab('login');
+  });
+
+  // ---------- accounts ----------
+  async function loadApp(selectNo) {
+    showApp();
+    await refreshAccounts(selectNo);
+  }
+
+  async function refreshAccounts(selectNo) {
+    state.accounts = await api('/api/accounts');
+    const wanted = selectNo ?? state.selected;
+    state.selected = state.accounts.some((a) => a.accountNo === wanted)
+      ? wanted
+      : (state.accounts[0] ? state.accounts[0].accountNo : null);
+    renderAccounts();
+    await renderSelected();
+  }
+
+  function renderAccounts() {
+    const list = $('#account-list');
+    list.replaceChildren();
+    let total = 0;
+    state.accounts.forEach((a) => {
+      total += Number(a.balance);
+      const btn = el('button', { class: 'account-btn', type: 'button', 'aria-current': String(a.accountNo === state.selected) },
+        el('span', { class: 'kind', text: kindLabel(a.type) }),
+        el('span', { class: 'no', text: 'No. ' + a.accountNo }),
+        el('span', { class: 'acct-balance', text: fmt(a.balance) }));
+      btn.addEventListener('click', async () => {
+        state.selected = a.accountNo;
+        renderAccounts();
+        await renderSelected();
+      });
+      list.append(el('li', {}, btn));
+    });
+    $('#total-balance').textContent = fmt(total);
+  }
+
+  async function renderSelected() {
+    const acct = state.accounts.find((a) => a.accountNo === state.selected);
+    $('#main-panel').hidden = !acct;
+    if (!acct) return;
+    $('#acct-type').textContent = kindLabel(acct.type);
+    $('#acct-no').textContent = 'Account number ' + acct.accountNo;
+    $('#acct-balance').textContent = fmt(acct.balance);
+
+    const body = $('#statement-body');
+    try {
+      const txs = await api(`/api/accounts/${acct.accountNo}/transactions?limit=100`);
+      body.replaceChildren();
+      $('#statement-empty').hidden = txs.length > 0;
+      txs.forEach((t) => {
+        const when = new Date(t.date);
+        const credit = t.direction === 'CREDIT';
+        const detail = el('td', {}, document.createTextNode(t.remarks || t.type));
+        const sub = el('span', { class: 'sub', text: t.type === 'TRANSFER' && t.relatedAccountNo
+          ? (credit ? 'Received from ' : 'Sent to ') + t.relatedAccountNo
+          : t.type[0] + t.type.slice(1).toLowerCase() });
+        detail.append(sub);
+        body.append(el('tr', {},
+          el('td', { class: 'date', text: dateFmt.format(when) + ', ' + timeFmt.format(when) }),
+          detail,
+          el('td', { class: 'num amt in', text: credit ? fmt(t.amount) : '' }),
+          el('td', { class: 'num amt out', text: credit ? '' : fmt(t.amount) }),
+          el('td', { class: 'num amt bal', text: fmt(t.balanceAfter) })));
+      });
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  // ---------- open account ----------
+  const openDialog = $('#open-dialog');
+  $('#open-account-btn').addEventListener('click', () => {
+    $('#open-form').reset();
+    showError($('#open-form'), '');
+    openDialog.showModal();
+  });
+
+  $('#open-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    showError(f, '');
+    const raw = f.initialDeposit.value.trim();
+    if (raw && !validAmount(raw, true)) return showError(f, 'Enter a valid amount, like 500 or 500.50');
+    withBusy(f, async () => {
+      try {
+        const acct = await api('/api/accounts', {
+          method: 'POST',
+          body: { type: f.type.value, initialDeposit: raw ? Number(raw) : null },
+        });
+        openDialog.close();
+        await refreshAccounts(acct.accountNo);
+        toast('Opened account ' + acct.accountNo);
+      } catch (err) {
+        showError(f, err.message);
+      }
+    });
+  });
+
+  // ---------- deposit / withdraw / send ----------
+  const actionDialog = $('#action-dialog');
+  const actionForm = $('#action-form');
+  const labels = {
+    deposit: { title: 'Deposit money', submit: 'Deposit' },
+    withdraw: { title: 'Withdraw money', submit: 'Withdraw' },
+    transfer: { title: 'Send money', submit: 'Send money' },
+  };
+
+  function validAmount(text, allowZero = false) {
+    if (!/^\d{1,8}(\.\d{1,2})?$/.test(text)) return false;
+    return allowZero || Number(text) > 0;
+  }
+
+  $$('[data-action]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const acct = state.accounts.find((a) => a.accountNo === state.selected);
+      if (!acct) return;
+      state.mode = btn.dataset.action;
+      actionForm.reset();
+      showError(actionForm, '');
+      $('#action-title').textContent = labels[state.mode].title;
+      $('#action-submit').textContent = labels[state.mode].submit;
+      $('#action-sub').textContent = `${kindLabel(acct.type)} ${acct.accountNo}. Balance ${fmt(acct.balance)}`;
+      const isTransfer = state.mode === 'transfer';
+      $('#to-field').hidden = !isTransfer;
+      $('#to-hint').textContent = '';
+      actionDialog.showModal();
+    }));
+
+  // Show who owns the account number being typed, so the sender can check before paying.
+  let lookupTimer;
+  actionForm.toAccount.addEventListener('input', () => {
+    const hint = $('#to-hint');
+    const value = actionForm.toAccount.value.trim();
+    clearTimeout(lookupTimer);
+    hint.textContent = '';
+    if (!/^\d{6,19}$/.test(value)) return;
+    lookupTimer = setTimeout(async () => {
+      try {
+        const r = await api('/api/lookup/' + value);
+        if (actionForm.toAccount.value.trim() === value) hint.textContent = 'Account holder: ' + r.holder;
+      } catch (err) {
+        if (actionForm.toAccount.value.trim() === value) hint.textContent = err.message;
+      }
+    }, 300);
+  });
+
+  actionForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = actionForm;
+    showError(f, '');
+    const amountText = f.amount.value.trim();
+    if (!validAmount(amountText)) return showError(f, 'Enter an amount greater than zero, like 500 or 500.50');
+    const remarks = f.remarks.value.trim();
+    const acctNo = state.selected;
+
+    let path;
+    let body;
+    let done;
+    if (state.mode === 'transfer') {
+      const to = f.toAccount.value.trim();
+      if (!/^\d+$/.test(to)) return showError(f, 'Enter the account number you want to send to');
+      path = '/api/transfers';
+      body = { fromAccount: acctNo, toAccount: Number(to), amount: Number(amountText), remarks };
+      done = `Sent ${fmt(amountText)} to account ${to}`;
+    } else {
+      path = `/api/accounts/${acctNo}/${state.mode}`;
+      body = { amount: Number(amountText), remarks };
+      done = (state.mode === 'deposit' ? 'Deposited ' : 'Withdrew ') + fmt(amountText);
+    }
+
+    withBusy(f, async () => {
+      try {
+        await api(path, { method: 'POST', body });
+        actionDialog.close();
+        await refreshAccounts(acctNo);
+        toast(done);
+      } catch (err) {
+        showError(f, err.message);
+      }
+    });
+  });
+
+  // ---------- dialog close buttons ----------
+  $$('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+
+  // ---------- start ----------
+  (async function init() {
+    try {
+      state.user = await api('/api/auth/me');
+      await loadApp();
+    } catch (_) {
+      showAuth();
+    }
+  })();
+})();
+
+</script>
